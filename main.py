@@ -25,7 +25,7 @@ image_size = 32
 batch_size = 128
 
 
-def fit(epochs, lr,fixed_latent, start_idx=0):
+def fit(epochs, lr,discriminator,generator,fixed_latent,name="test", start_idx=0):
         torch.cuda.empty_cache()
         gl_time=time.time()
         # Losses & scores
@@ -38,7 +38,7 @@ def fit(epochs, lr,fixed_latent, start_idx=0):
         opt_d = torch.optim.Adam(discriminator.parameters(), lr=lr, betas=(0.5, 0.999))
         opt_g = torch.optim.Adam(generator.parameters(), lr=lr, betas=(0.5, 0.999))
         if start_idx!=0: # load model
-            checkpoint= torch.load(os.path.join(sample_dir,'model_{0:0=4d}.pth'.format(start_idx)))
+            checkpoint= torch.load(os.path.join(sample_dir,'{}_{0:0=4d}.pth'.format(name,start_idx)))
             start_idx=checkpoint["epoch"]
             generator.load_state_dict(checkpoint["gen_sd"])
             opt_g.load_state_dict(checkpoint["opt_g_sd"])
@@ -82,8 +82,8 @@ def fit(epochs, lr,fixed_latent, start_idx=0):
                     "epoch":epoch+1,"gen_sd":generator.state_dict(),"opt_g_sd":opt_g.state_dict(),"loss_g":losses_g,
                                   "dis_sd": discriminator.state_dict(), "opt_d_sd": opt_d.state_dict(),"loss_d": losses_d,
                     "fixed_latent":fixed_latent
-                },os.path.join(sample_dir,'model_{0:0=4d}.pth'.format(epoch+1) ))
-                print("saved checkpoint model_{0:0=4d}.pth".format(epoch+1))
+                },os.path.join(sample_dir,'{}_{0:0=4d}.pth'.format(name,epoch+1) ))
+                print("saved checkpoint {}_{0:0=4d}.pth".format(name,epoch+1))
 
         return losses_g, losses_d, real_scores, fake_scores
 
@@ -110,5 +110,5 @@ if __name__ == '__main__':
 
     fixed_latent = torch.randn(64, latent_size, 1, 1, device=device)
     gen_save_samples(generator, sample_dir, 0, fixed_latent, stats)
-    history = fit(epochs, lr,fixed_latent,start_idx=start_from)
+    history = fit(epochs, lr,generator=generator,discriminator=discriminator,fixed_latent=fixed_latent,start_idx=start_from)
     print('done')
