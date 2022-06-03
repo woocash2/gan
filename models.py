@@ -34,8 +34,11 @@ class Discriminator(nn.Module):
     def __init__(self) -> None:
         super().__init__()
         self.layers = nn.ModuleList([
-            # in: 3 x 32 x 32
-            Layer(3, 32),
+            # in: 3 x 64 x 64
+            Layer(3, 16),
+            # out: 16 x 32 x 32
+
+            Layer(16, 32),
             # out: 32 x 16 x 16
 
             Layer(32, 64),
@@ -74,12 +77,15 @@ class Generator(nn.Module):
 
             LayerT(64, 32, 2, 1),
             # out: 32 x 16 x 16
+
+            LayerT(32, 16, 2, 1),
+            # out: 16 x 32 x 32
         ])
 
         self.finisher = nn.ModuleList([
-            nn.ConvTranspose2d(32, 3, kernel_size=4, stride=2, padding=1, bias=False),
+            nn.ConvTranspose2d(16, 3, kernel_size=4, stride=2, padding=1, bias=False),
             nn.Tanh()
-            # out: 3 x 32 x 32
+            # out: 3 x 64 x 64
         ])
 
     def forward(self, x):

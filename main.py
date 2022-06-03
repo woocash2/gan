@@ -18,10 +18,10 @@ epochs_per_checkpoint=10
 latent_size = 64
 start_from=0
 lr = 0.0002
-epochs = 51
+epochs = 101
 sample_dir = 'xgenerated'
 stats = (0.5, 0.5, 0.5), (0.5, 0.5, 0.5)
-image_size = 32
+image_size = 64
 batch_size = 128
 small_train_set = True
 
