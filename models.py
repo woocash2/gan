@@ -89,3 +89,19 @@ class Generator(nn.Module):
             x = fin(x)
         return x
 
+
+class GeneratorSkip(Generator):
+    def __init__(self, latent_size, device) -> None:
+        super().__init__(latent_size)
+        self.device = device
+
+    def forward(self, x):
+        img = torch.zeros([x.shape[0], 64, 1, 1]).to(self.device)
+        for layer in self.layers:
+            x = layer(x)
+            img = nn.Upsample([x.shape[2], x.shape[3]]).to(self.device)(img)
+            img = nn.Conv2d(img.shape[1], x.shape[1], 1).to(self.device)(img)
+            img = (img + x)
+        for fin in self.finisher:
+            img = fin(img)
+        return img

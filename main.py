@@ -19,7 +19,7 @@ latent_size = 64
 start_from=0
 lr = 0.0002
 epochs = 51
-sample_dir = 'generated'
+sample_dir = 'xgenerated'
 stats = (0.5, 0.5, 0.5), (0.5, 0.5, 0.5)
 image_size = 32
 batch_size = 128
@@ -108,7 +108,7 @@ if __name__ == '__main__':
     train_dl = DeviceDataLoader(train_dl, device)
 
     discriminator = Discriminator().to(device)
-    generator = GeneratorSkip(latent_size).to(device)
+    generator = GeneratorSkip(latent_size, device).to(device)
 
     os.makedirs(sample_dir, exist_ok=True)
 
