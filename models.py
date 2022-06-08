@@ -100,13 +100,19 @@ class GeneratorSkip(Generator):
     def __init__(self, latent_size, device) -> None:
         super().__init__(latent_size)
         self.device = device
+        self.convs = [
+            nn.Conv2d(latent_size, 128, 1).to(device),
+            nn.Conv2d(128, 64, 1).to(device),
+            nn.Conv2d(64, 32, 1).to(device),
+            nn.Conv2d(32, 16, 1).to(device),
+        ]
 
     def forward(self, x):
         img = torch.zeros([x.shape[0], 64, 1, 1]).to(self.device)
-        for layer in self.layers:
+        for layer, conv in zip(self.layers, self.convs):
             x = layer(x)
             img = nn.Upsample([x.shape[2], x.shape[3]]).to(self.device)(img)
-            img = nn.Conv2d(img.shape[1], x.shape[1], 1).to(self.device)(img)
+            img = conv(img)
             img = (img + x)
         for fin in self.finisher:
             img = fin(img)

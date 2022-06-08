@@ -17,13 +17,13 @@ epochs_per_sample=5
 epochs_per_checkpoint=10
 latent_size = 64
 start_from=0
-lr = 0.0002
-epochs = 101
-sample_dir = 'xgenerated'
+lr = 0.00025
+epochs = 301
+sample_dir = 'std-generated'
 stats = (0.5, 0.5, 0.5), (0.5, 0.5, 0.5)
 image_size = 64
-batch_size = 128
-small_train_set = True
+batch_size = 64
+small_train_set = False
 
 
 def fit(epochs, lr,fixed_latent, start_idx=0):
@@ -39,7 +39,7 @@ def fit(epochs, lr,fixed_latent, start_idx=0):
         opt_d = torch.optim.Adam(discriminator.parameters(), lr=lr, betas=(0.5, 0.999))
         opt_g = torch.optim.Adam(generator.parameters(), lr=lr, betas=(0.5, 0.999))
         if start_idx!=0: # load model
-            checkpoint= torch.load(os.path.join(sample_dir,'model_{0:0=4d}.pth'.format(start_idx)))
+            checkpoint= torch.load(os.path.join(sample_dir,'model_{0:0=4d}.pth'.format(start_idx))) 
             start_idx=checkpoint["epoch"]
             generator.load_state_dict(checkpoint["gen_sd"])
             opt_g.load_state_dict(checkpoint["opt_g_sd"])
@@ -108,7 +108,7 @@ if __name__ == '__main__':
     train_dl = DeviceDataLoader(train_dl, device)
 
     discriminator = Discriminator().to(device)
-    generator = GeneratorSkip(latent_size, device).to(device)
+    generator = Generator(latent_size).to(device)
 
     os.makedirs(sample_dir, exist_ok=True)
 
