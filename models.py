@@ -66,7 +66,6 @@ class ResidualLayerT(nn.Module):
             if i==1:
                 xConv=layer(x)
                 x=nn.UpsamplingBilinear2d([xConv.shape[2],xConv.shape[3]]).to(self.device)(x)
-                print(x.shape,xConv.shape)
                 x=x+xConv
             else:
                 x=layer(x)
@@ -95,8 +94,8 @@ class Discriminator(nn.Module):
         ])
 
         self.finisher = nn.ModuleList([
+            nn.BatchNorm2d(48),
             nn.Conv2d(48, 1, kernel_size=4, stride=1, padding=0, bias=False),
-
             # out: 1 x 1 x 1
 
             nn.Flatten(),
@@ -166,6 +165,30 @@ class GeneratorSkip(Generator):
         for fin in self.finisher:
             img = fin(img)
         return img
+
+class DiscriminatorSkip(Discriminator):
+    def __init__(self,device) -> None:
+        super().__init__()
+        self.device=device
+        self.convs = [
+            nn.Conv2d(3, 6, 1,bias=False).to(device),
+            nn.Conv2d(6, 12, 1,bias=False).to(device),
+            nn.Conv2d(12, 24, 1,bias=False).to(device),
+            nn.Conv2d(24, 48, 1,bias=False).to(device),
+        ]
+        for layer in self.convs:
+            layer.weight=nn.Parameter(torch.ones_like(layer.weight)/layer.weight.shape[0]).to(device)
+    def forward(self, x):
+        x_init=torch.clone(x)
+        for conv,layer in zip(self.convs,self.layers):
+            x_init = nn.AvgPool2d(kernel_size=2)(x_init)
+            x_init = conv(x_init)
+            x = layer(x)
+            x=x+x_init
+        for fin in self.finisher:
+            x = fin(x)
+        return x
+
 
 class DiscriminatorResidual(Discriminator):
     def __init__(self) -> None:

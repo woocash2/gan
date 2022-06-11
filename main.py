@@ -97,6 +97,7 @@ if __name__ == '__main__':
         T.Resize(image_size),
         T.CenterCrop(image_size),
         T.ToTensor(),
+        T.Normalize(*stats),
     ]))
 
     if small_train_set:
@@ -108,8 +109,8 @@ if __name__ == '__main__':
     device = get_default_device()
     train_dl = DeviceDataLoader(train_dl, device)
 
-    discriminator = DiscriminatorResidual().to(device)
-    generator = GeneratorResidual(latent_size,device).to(device)
+    discriminator = DiscriminatorSkip(device).to(device)
+    generator = Generator(latent_size).to(device)
 
     os.makedirs(sample_dir, exist_ok=True)
 
