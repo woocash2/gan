@@ -24,6 +24,9 @@ stats = (0.5, 0.5, 0.5), (0.5, 0.5, 0.5)
 image_size = 64
 batch_size = 256
 small_train_set = True
+small_set_size = 10000
+
+blur_kernels = [9, 7, 5, 3, 1]
 
 
 def fit(epochs, lr,fixed_latent, start_idx=0,name="model"):
@@ -50,19 +53,23 @@ def fit(epochs, lr,fixed_latent, start_idx=0,name="model"):
             fixed_latent=checkpoint["fixed_latent"]
 
         trainer = Trainer(discriminator, generator, batch_size, device, latent_size)
+        blur_idx = 0
 
         for epoch in range(start_idx,epochs):
+            if epoch / epochs > (blur_idx + 1) / len(blur_kernels):
+                blur_idx += 1
             tim =time.time()
-            batches=len(tqdm(train_dl))
+            batches=len(train_dl)
             i=0
-            for real_images, _ in tqdm(train_dl):
+            for real_images, _ in train_dl:
                 # Train discriminator
                 i+=1
+                blur_images = T.GaussianBlur(blur_kernels[blur_idx], sigma=1)(real_images)
                 tim2=time.time()
-                loss_d, real_score, fake_score = trainer.train_discriminator(real_images, opt_d)
+                loss_d, real_score, fake_score = trainer.train_discriminator(blur_images, opt_d)
                 # Train generator
                 loss_g = trainer.train_generator(opt_g)
-                print("Epoch [{}/{}] batch [{}/{}] time:{:.4f}".format(epoch+1,epochs,i,batches,time.time()-tim2))
+                # print("Epoch [{}/{}] batch [{}/{}] time:{:.4f}".format(epoch+1,epochs,i,batches,time.time()-tim2))
 
 
             # Record losses & scores
@@ -101,7 +108,7 @@ if __name__ == '__main__':
     ]))
 
     if small_train_set:
-        train_dl = DataLoader(train_ds, batch_size, shuffle=False, num_workers=3, pin_memory=True, sampler=range(0, 10000))
+        train_dl = DataLoader(train_ds, batch_size, shuffle=False, num_workers=3, pin_memory=True, sampler=range(0, small_set_size))
     else:
         train_dl = DataLoader(train_ds, batch_size, shuffle=True, num_workers=3, pin_memory=True)
     
