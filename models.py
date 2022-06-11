@@ -19,7 +19,7 @@ class LayerT(nn.Module):
     def __init__(self, in_size, out_size, stride, padding) -> None:
         super().__init__()
         self.sublayers = nn.ModuleList([
-            nn.ConvTranspose2d(in_size, out_size, kernel_size=4, stride=stride, padding=padding, bias=False),
+            nn.ConvTranspose2d(in_size, out_size, kernel_size=4, stride=stride, padding=padding),
             nn.BatchNorm2d(out_size),
             nn.ReLU(True),
         ])
@@ -30,26 +30,48 @@ class LayerT(nn.Module):
         return x
 
 
+class ResidualLayer(nn.Module):
+    def __init__(self, in_size, out_size) -> None:
+        super().__init__()
+        self.sublayers = nn.ModuleList([
+            nn.Conv2d(in_size, out_size, kernel_size=4, stride=2, padding=1),
+            nn.Conv2d(in_size+out_size,out_size,1,bias=False),
+            nn.BatchNorm2d(out_size),
+            nn.LeakyReLU(0.2, inplace=True),
+        ])
+
+    def forward(self, x):
+        for i, layer in enumerate(self.sublayers):
+            if i==0:
+                xConv=layer(x)
+                x=nn.AvgPool2d(kernel_size=2)(x)
+                x=torch.cat((x,xConv),1)
+            else:
+                x=layer(x)
+        return x
+
+
 class Discriminator(nn.Module):
     def __init__(self) -> None:
         super().__init__()
         self.layers = nn.ModuleList([
             # in: 3 x 64 x 64
-            Layer(3, 16),
+            Layer(3, 6),
             # out: 16 x 32 x 32
 
-            Layer(16, 32),
+            Layer(6, 12),
             # out: 32 x 16 x 16
 
-            Layer(32, 64),
+            Layer(12, 24),
             # out: 64 x 8 x 8
 
-            Layer(64, 128),
+            Layer(24, 48),
             # out: 128 x 4 x 4
         ])
 
         self.finisher = nn.ModuleList([
-            nn.Conv2d(128, 1, kernel_size=4, stride=1, padding=0, bias=False),
+            nn.Conv2d(48, 1, kernel_size=4, stride=1, padding=0, bias=False),
+
             # out: 1 x 1 x 1
 
             nn.Flatten(),
@@ -101,11 +123,13 @@ class GeneratorSkip(Generator):
         super().__init__(latent_size)
         self.device = device
         self.convs = [
-            nn.Conv2d(latent_size, 128, 1).to(device),
-            nn.Conv2d(128, 64, 1).to(device),
-            nn.Conv2d(64, 32, 1).to(device),
-            nn.Conv2d(32, 16, 1).to(device),
+            nn.Conv2d(latent_size, 128, 1,bias=False).to(device),
+            nn.Conv2d(128, 64, 1,bias=False).to(device),
+            nn.Conv2d(64, 32, 1,bias=False).to(device),
+            nn.Conv2d(32, 16, 1,bias=False).to(device),
         ]
+        for layer in self.convs:
+            layer.weight=nn.Parameter(torch.ones_like(layer.weight)/layer.weight.shape[0]).to(device)
 
     def forward(self, x):
         img = torch.zeros([x.shape[0], 64, 1, 1]).to(self.device)
@@ -117,3 +141,21 @@ class GeneratorSkip(Generator):
         for fin in self.finisher:
             img = fin(img)
         return img
+
+class ResidualDiscriminator(Discriminator):
+    def __init__(self) -> None:
+        super().__init__()
+        self.layers=nn.ModuleList([
+            # in: 3 x 64 x 64
+            ResidualLayer(3, 6),
+            # out: 16 x 32 x 32
+
+            ResidualLayer(6, 12),
+            # out: 32 x 16 x 16
+
+            ResidualLayer(12, 24),
+            # out: 64 x 8 x 8
+
+            ResidualLayer(24, 48),
+            # out: 128 x 4 x 4
+        ])

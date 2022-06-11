@@ -17,16 +17,16 @@ epochs_per_sample=5
 epochs_per_checkpoint=10
 latent_size = 64
 start_from=0
-lr = 0.00025
+lr = 0.0005
 epochs = 301
 sample_dir = 'std-generated'
 stats = (0.5, 0.5, 0.5), (0.5, 0.5, 0.5)
 image_size = 64
-batch_size = 64
-small_train_set = False
+batch_size = 256
+small_train_set = True
 
 
-def fit(epochs, lr,fixed_latent, start_idx=0):
+def fit(epochs, lr,fixed_latent, start_idx=0,name="model"):
         torch.cuda.empty_cache()
         gl_time=time.time()
         # Losses & scores
@@ -39,7 +39,7 @@ def fit(epochs, lr,fixed_latent, start_idx=0):
         opt_d = torch.optim.Adam(discriminator.parameters(), lr=lr, betas=(0.5, 0.999))
         opt_g = torch.optim.Adam(generator.parameters(), lr=lr, betas=(0.5, 0.999))
         if start_idx!=0: # load model
-            checkpoint= torch.load(os.path.join(sample_dir,'model_{0:0=4d}.pth'.format(start_idx))) 
+            checkpoint= torch.load(os.path.join(sample_dir,'{}_{0:0=4d}.pth'.format(name,start_idx)))
             start_idx=checkpoint["epoch"]
             generator.load_state_dict(checkpoint["gen_sd"])
             opt_g.load_state_dict(checkpoint["opt_g_sd"])
@@ -62,7 +62,7 @@ def fit(epochs, lr,fixed_latent, start_idx=0):
                 loss_d, real_score, fake_score = trainer.train_discriminator(real_images, opt_d)
                 # Train generator
                 loss_g = trainer.train_generator(opt_g)
-                print("batch [{}/{}] time:{:.4f}".format(i,batches,time.time()-tim2))
+                print("Epoch [{}/{}] batch [{}/{}] time:{:.4f}".format(epoch+1,epochs,i,batches,time.time()-tim2))
 
 
             # Record losses & scores
@@ -78,13 +78,14 @@ def fit(epochs, lr,fixed_latent, start_idx=0):
             # Save generated images
             if (epoch!=start_idx and (epoch)%epochs_per_sample==0) or epoch==epochs-1:
                 gen_save_samples(generator, sample_dir, epoch + 1, fixed_latent, stats, show=False)
-            if (epoch!=start_idx and (epoch)%epochs_per_checkpoint==0) or epoch==epochs-1:
-                torch.save({
-                    "epoch":epoch+1,"gen_sd":generator.state_dict(),"opt_g_sd":opt_g.state_dict(),"loss_g":losses_g,
-                                  "dis_sd": discriminator.state_dict(), "opt_d_sd": opt_d.state_dict(),"loss_d": losses_d,
-                    "fixed_latent":fixed_latent
-                },os.path.join(sample_dir,'model_{0:0=4d}.pth'.format(epoch+1) ))
-                print("saved checkpoint model_{0:0=4d}.pth".format(epoch+1))
+            if not small_train_set:
+                if (epoch!=start_idx and (epoch)%epochs_per_checkpoint==0) or epoch==epochs-1:
+                    torch.save({
+                        "epoch":epoch+1,"gen_sd":generator.state_dict(),"opt_g_sd":opt_g.state_dict(),"loss_g":losses_g,
+                                      "dis_sd": discriminator.state_dict(), "opt_d_sd": opt_d.state_dict(),"loss_d": losses_d,
+                        "fixed_latent":fixed_latent
+                    },os.path.join(sample_dir,'{}_{:0=4d}.pth'.format(name,epoch+1) ))
+                    print("saved checkpoint {}_{:0=4d}.pth".format(name,epoch+1))
 
         return losses_g, losses_d, real_scores, fake_scores
 
@@ -107,8 +108,8 @@ if __name__ == '__main__':
     device = get_default_device()
     train_dl = DeviceDataLoader(train_dl, device)
 
-    discriminator = Discriminator().to(device)
-    generator = Generator(latent_size).to(device)
+    discriminator = ResidualDiscriminator().to(device)
+    generator = GeneratorSkip(latent_size,device).to(device)
 
     os.makedirs(sample_dir, exist_ok=True)
 
