@@ -97,7 +97,7 @@ if __name__ == '__main__':
         T.Resize(image_size),
         T.CenterCrop(image_size),
         T.ToTensor(),
-        T.Normalize(*stats)]))
+    ]))
 
     if small_train_set:
         train_dl = DataLoader(train_ds, batch_size, shuffle=False, num_workers=3, pin_memory=True, sampler=range(0, 10000))
@@ -108,8 +108,8 @@ if __name__ == '__main__':
     device = get_default_device()
     train_dl = DeviceDataLoader(train_dl, device)
 
-    discriminator = ResidualDiscriminator().to(device)
-    generator = GeneratorSkip(latent_size,device).to(device)
+    discriminator = DiscriminatorResidual().to(device)
+    generator = GeneratorResidual(latent_size,device).to(device)
 
     os.makedirs(sample_dir, exist_ok=True)
 
