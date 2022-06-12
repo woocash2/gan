@@ -5,9 +5,9 @@ class Layer(nn.Module):
     def __init__(self, in_size, out_size) -> None:
         super().__init__()
         self.sublayers = nn.ModuleList([
-            nn.Conv2d(in_size, out_size, kernel_size=4, stride=2, padding=1, bias=False),
+            nn.Conv2d(in_size, out_size, kernel_size=4, stride=2, padding=1),
             nn.BatchNorm2d(out_size),
-            nn.LeakyReLU(0.2, inplace=True),
+            nn.ReLU( inplace=True),
         ])
     
     def forward(self, x):
@@ -70,35 +70,29 @@ class ResidualLayerT(nn.Module):
             else:
                 x=layer(x)
         return x
-        for sublayer in self.sublayers:
-            x = sublayer(x)
-        return x
 
 
 class Discriminator(nn.Module):
     def __init__(self) -> None:
         super().__init__()
         self.layers = nn.ModuleList([
-            # in: 3 x 64 x 64
-            Layer(3, 6),
-            # out: 16 x 32 x 32
-
-            Layer(6, 12),
+            # in: 3 x 32 x 32
+            Layer(3, 32),
             # out: 32 x 16 x 16
 
-            Layer(12, 24),
+            Layer(32, 64),
             # out: 64 x 8 x 8
 
-            Layer(24, 48),
+            Layer(64, 128),
             # out: 128 x 4 x 4
+
         ])
 
         self.finisher = nn.ModuleList([
-            nn.BatchNorm2d(48),
-            nn.Conv2d(48, 1, kernel_size=4, stride=1, padding=0, bias=False),
+            nn.Conv2d(128,1,kernel_size=4,stride=1,padding=0),
             # out: 1 x 1 x 1
-
             nn.Flatten(),
+
             nn.Sigmoid(),
         ])
 
@@ -114,24 +108,21 @@ class Generator(nn.Module):
     def __init__(self, latent_size) -> None:
         super().__init__()
         self.layers = nn.ModuleList([
-            # in: latent_size x 1 x 1
-            LayerT(latent_size, 128, 1, 0),
-            # out: 128 x 4 x 4
+            # in: latent_size  x 1 x 1
+            LayerT(latent_size, 64, 1, 0),
+            # out: 64 x 4 x 4
 
-            LayerT(128, 64, 2, 1),
+            LayerT(64, 64, 2, 1),
             # out: 64 x 8 x 8
 
             LayerT(64, 32, 2, 1),
             # out: 32 x 16 x 16
-
-            LayerT(32, 16, 2, 1),
-            # out: 16 x 32 x 32
         ])
 
         self.finisher = nn.ModuleList([
-            nn.ConvTranspose2d(16, 3, kernel_size=4, stride=2, padding=1, bias=False),
-            nn.Tanh()
+            nn.ConvTranspose2d(32, 3, kernel_size=4, stride=2, padding=1, bias=False),
             # out: 3 x 64 x 64
+            nn.Tanh()
         ])
 
     def forward(self, x):
@@ -207,7 +198,6 @@ class DiscriminatorResidual(Discriminator):
             ResidualLayer(24, 48),
             # out: 128 x 4 x 4
         ])
-
 class GeneratorResidual(Generator):
     def __init__(self, latent_size, device) -> None:
         super().__init__(latent_size)
@@ -225,3 +215,26 @@ class GeneratorResidual(Generator):
             ResidualLayerT(32, 16, 2, 1,self.device),
             # out: 16 x 32 x 32
         ])
+
+class GeneratorIntermidiate(Generator):
+    def __init__(self, latent_size, device) -> None:
+        super().__init__(latent_size)
+        self.device = device
+        self.preproc = nn.ModuleList([
+            nn.Flatten(),
+            nn.Linear(latent_size, latent_size//2),
+            nn.ReLU().to(device),
+            nn.Linear(latent_size//2, latent_size//2),
+            nn.ReLU().to(device),
+            nn.Linear(latent_size//2, latent_size),
+            nn.ReLU().to(device),
+        ])
+    def forward(self, x):
+        for layer in self.preproc:
+            x = layer(x)
+        x = x[:, :, None, None]
+        for layer in self.layers:
+            x = layer(x)
+        for fin in self.finisher:
+            x = fin(x)
+        return x

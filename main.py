@@ -15,14 +15,14 @@ from util import *
 DATA_DIR='organic'
 epochs_per_sample=5
 epochs_per_checkpoint=10
-latent_size = 64
+latent_size = 32
 start_from=0
-lr = 0.0005
+lr = 0.0002
 epochs = 301
 sample_dir = 'std-generated'
 stats = (0.5, 0.5, 0.5), (0.5, 0.5, 0.5)
-image_size = 64
-batch_size = 256
+image_size = 32
+batch_size = 64
 small_train_set = True
 small_set_size = 10000
 
@@ -59,18 +59,15 @@ def fit(epochs, lr,fixed_latent, start_idx=0,name="model"):
             if epoch / epochs > (blur_idx + 1) / len(blur_kernels):
                 blur_idx += 1
             tim =time.time()
-            batches=len(train_dl)
-            i=0
             for real_images, _ in train_dl:
                 # Train discriminator
-                i+=1
-                blur_images = T.GaussianBlur(blur_kernels[blur_idx], sigma=1)(real_images)
-                tim2=time.time()
-                loss_d, real_score, fake_score = trainer.train_discriminator(blur_images, opt_d)
+                if blur_kernels[blur_idx]>1:
+                    blur_images = T.GaussianBlur(blur_kernels[blur_idx], sigma=1)(real_images)
+                    loss_d, real_score, fake_score = trainer.train_discriminator(blur_images, opt_d)
+                else:
+                    loss_d, real_score, fake_score = trainer.train_discriminator(real_images, opt_d)
                 # Train generator
                 loss_g = trainer.train_generator(opt_g)
-                # print("Epoch [{}/{}] batch [{}/{}] time:{:.4f}".format(epoch+1,epochs,i,batches,time.time()-tim2))
-
 
             # Record losses & scores
             losses_g.append(loss_g)
@@ -116,7 +113,7 @@ if __name__ == '__main__':
     device = get_default_device()
     train_dl = DeviceDataLoader(train_dl, device)
 
-    discriminator = DiscriminatorSkip(device).to(device)
+    discriminator = Discriminator().to(device)
     generator = Generator(latent_size).to(device)
 
     os.makedirs(sample_dir, exist_ok=True)
