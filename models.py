@@ -121,7 +121,7 @@ class Generator(nn.Module):
 
         self.finisher = nn.ModuleList([
             nn.ConvTranspose2d(32, 3, kernel_size=4, stride=2, padding=1, bias=False),
-            # out: 3 x 64 x 64
+            # out: 3 x 32 x 32
             nn.Tanh()
         ])
 
@@ -138,13 +138,13 @@ class GeneratorSkip(Generator):
         super().__init__(latent_size)
         self.device = device
         self.convs = [
-            nn.Conv2d(latent_size, 128, 1,bias=False).to(device),
-            nn.Conv2d(128, 64, 1,bias=False).to(device),
+            nn.Conv2d(64, 64, 1,bias=False).to(device),
+            nn.Conv2d(64, 64, 1,bias=False).to(device),
             nn.Conv2d(64, 32, 1,bias=False).to(device),
-            nn.Conv2d(32, 16, 1,bias=False).to(device),
         ]
         for layer in self.convs:
             layer.weight=nn.Parameter(torch.ones_like(layer.weight)/layer.weight.shape[0]).to(device)
+        self.latent_size = latent_size
 
     def forward(self, x):
         img = torch.zeros([x.shape[0], 64, 1, 1]).to(self.device)
@@ -162,10 +162,9 @@ class DiscriminatorSkip(Discriminator):
         super().__init__()
         self.device=device
         self.convs = [
-            nn.Conv2d(3, 6, 1,bias=False).to(device),
-            nn.Conv2d(6, 12, 1,bias=False).to(device),
-            nn.Conv2d(12, 24, 1,bias=False).to(device),
-            nn.Conv2d(24, 48, 1,bias=False).to(device),
+            nn.Conv2d(3, 32, 1,bias=False).to(device),
+            nn.Conv2d(32, 64, 1,bias=False).to(device),
+            nn.Conv2d(64, 128, 1,bias=False).to(device),
         ]
         for layer in self.convs:
             layer.weight=nn.Parameter(torch.ones_like(layer.weight)/layer.weight.shape[0]).to(device)
