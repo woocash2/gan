@@ -19,7 +19,7 @@ latent_size = 32
 start_from=0
 lr = 0.0002
 epochs = 301
-sample_dir = 'std-generated'
+sample_dir = 'std-generated2'
 stats = (0.5, 0.5, 0.5), (0.5, 0.5, 0.5)
 image_size = 32
 batch_size = 64
@@ -113,7 +113,7 @@ if __name__ == '__main__':
     device = get_default_device()
     train_dl = DeviceDataLoader(train_dl, device)
 
-    discriminator = Discriminator().to(device)
+    discriminator = DiscriminatorSkip(device).to(device)
     generator = Generator(latent_size).to(device)
 
     os.makedirs(sample_dir, exist_ok=True)

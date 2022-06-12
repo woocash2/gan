@@ -77,19 +77,19 @@ class Discriminator(nn.Module):
         super().__init__()
         self.layers = nn.ModuleList([
             # in: 3 x 32 x 32
-            Layer(3, 32),
+            Layer(3, 16),
             # out: 32 x 16 x 16
 
-            Layer(32, 64),
+            Layer(16, 32),
             # out: 64 x 8 x 8
 
-            Layer(64, 128),
+            Layer(32, 64),
             # out: 128 x 4 x 4
 
         ])
 
         self.finisher = nn.ModuleList([
-            nn.Conv2d(128,1,kernel_size=4,stride=1,padding=0),
+            nn.Conv2d(64,1,kernel_size=4,stride=1,padding=0),
             # out: 1 x 1 x 1
             nn.Flatten(),
 
@@ -162,20 +162,24 @@ class DiscriminatorSkip(Discriminator):
         super().__init__()
         self.device=device
         self.convs = [
-            nn.Conv2d(3, 6, 1,bias=False).to(device),
-            nn.Conv2d(6, 12, 1,bias=False).to(device),
-            nn.Conv2d(12, 24, 1,bias=False).to(device),
-            nn.Conv2d(24, 48, 1,bias=False).to(device),
+            # in 3 x 32 x 32
+            nn.Conv2d(3, 16, 1,bias=False).to(device),
+            # out: 16 x 16 x 16
+            nn.Conv2d(16, 32, 1,bias=False).to(device),
+            # out: 32 x 8 x 8
+            nn.Conv2d(32, 64, 1,bias=False).to(device),
+            # out: 64 x 4 x 4
         ]
         for layer in self.convs:
             layer.weight=nn.Parameter(torch.ones_like(layer.weight)/layer.weight.shape[0]).to(device)
     def forward(self, x):
-        x_init=torch.clone(x)
+        x_init=torch.clone(x).to(self.device)
         for conv,layer in zip(self.convs,self.layers):
-            x_init = nn.AvgPool2d(kernel_size=2)(x_init)
+            x_init = nn.AvgPool2d(kernel_size=2).to(self.device)(x_init)
             x_init = conv(x_init)
             x = layer(x)
             x=x+x_init
+            x= nn.BatchNorm2d(x.shape[1]).to(self.device)(x)
         for fin in self.finisher:
             x = fin(x)
         return x
