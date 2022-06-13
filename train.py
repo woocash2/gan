@@ -1,6 +1,9 @@
 import torch
 import torch.nn.functional as F
 
+import util
+
+
 class Trainer():
     
     def __init__(s, discriminator, generator, batch_size, device, latent_size) -> None:
@@ -37,7 +40,7 @@ class Trainer():
         return loss.item(), real_score, fake_score
 
 
-    def train_generator(s, opt_g):
+    def train_generator(s, opt_g,std=0):
         # Clear generator gradients
         opt_g.zero_grad()
 
@@ -46,6 +49,7 @@ class Trainer():
         fake_images = s.generator(latent)
 
         # Try to fool the discriminator
+        fake_images = util.addGaussianNoise(fake_images,s.device,std=std)
         preds = s.discriminator(fake_images)
         targets = torch.ones(s.batch_size, 1, device=s.device)
         loss = F.binary_cross_entropy(preds, targets)

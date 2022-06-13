@@ -49,3 +49,6 @@ class DeviceDataLoader():
             yield to_device(b, self.device)
     def __len__(self):
         return len(self.dl)
+
+def addGaussianNoise(tensor,device,mean=0,std=1):
+    return tensor + (torch.randn(tensor.size())*std +mean).to(device)

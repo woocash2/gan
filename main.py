@@ -8,6 +8,7 @@ import time
 
 from tqdm import tqdm
 
+import util
 from models import *
 from train import Trainer
 from util import *
@@ -29,7 +30,7 @@ small_set_size = 10000
 blur_kernels = [9, 7, 5, 3, 1]
 
 
-def fit(epochs, lr,fixed_latent, start_idx=0,name="model"):
+def fit(epochs, lr,fixed_latent, start_idx=0,name="model",std=0.1):
         torch.cuda.empty_cache()
         gl_time=time.time()
         # Losses & scores
@@ -61,13 +62,14 @@ def fit(epochs, lr,fixed_latent, start_idx=0,name="model"):
             tim =time.time()
             for real_images, _ in train_dl:
                 # Train discriminator
+                real_images=util.addGaussianNoise(real_images,device,std=std)
                 if blur_kernels[blur_idx]>1:
                     blur_images = T.GaussianBlur(blur_kernels[blur_idx], sigma=1)(real_images)
                     loss_d, real_score, fake_score = trainer.train_discriminator(blur_images, opt_d)
                 else:
                     loss_d, real_score, fake_score = trainer.train_discriminator(real_images, opt_d)
                 # Train generator
-                loss_g = trainer.train_generator(opt_g)
+                loss_g = trainer.train_generator(opt_g,std=std)
 
             # Record losses & scores
             losses_g.append(loss_g)
