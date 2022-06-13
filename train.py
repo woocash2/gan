@@ -19,7 +19,7 @@ class Trainer():
 
         # Pass real images through discriminator
         real_preds = s.discriminator(real_images)
-        real_targets = torch.ones(real_images.size(0), 1, device=s.device) # ones for reals
+        real_targets = torch.ones(real_images.size(0), 1, device=s.device) * 0.9 # ones for reals
         real_loss = F.binary_cross_entropy(real_preds, real_targets)
         real_score = torch.mean(real_preds).item()
 
@@ -28,7 +28,7 @@ class Trainer():
         fake_images = s.generator(latent)
 
         # Pass fake images through discriminator
-        fake_targets = torch.zeros(fake_images.size(0), 1, device=s.device) # zeros for fakes
+        fake_targets = torch.zeros(fake_images.size(0), 1, device=s.device)+0.05 # zeros for fakes
         fake_preds = s.discriminator(fake_images)
         fake_loss = F.binary_cross_entropy(fake_preds, fake_targets)
         fake_score = torch.mean(fake_preds).item()

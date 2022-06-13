@@ -9,7 +9,7 @@ class Layer(nn.Module):
             nn.BatchNorm2d(out_size),
             nn.ReLU( inplace=True),
         ])
-    
+
     def forward(self, x):
         for sublayer in self.sublayers:
             x = sublayer(x)
@@ -23,7 +23,8 @@ class LayerT(nn.Module):
             nn.BatchNorm2d(out_size),
             nn.ReLU(True),
         ])
-    
+        nn.init.orthogonal_(self.sublayers[0].weight)
+
     def forward(self, x):
         for sublayer in self.sublayers:
             x = sublayer(x)
@@ -60,6 +61,8 @@ class ResidualLayerT(nn.Module):
             nn.BatchNorm2d(out_size),
             nn.ReLU(True)
         ])
+        nn.init.orthogonal_(self.sublayers[0].weight)
+        nn.init.orthogonal_(self.sublayers[1].weight)
 
     def forward(self, x):
         for i, layer in enumerate(self.sublayers):
