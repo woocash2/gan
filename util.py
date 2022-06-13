@@ -18,9 +18,9 @@ def show_batch(dl, nmax=64):
         show_images(images, nmax)
         break
 
-def get_default_device():
+def get_default_device(x=0):
     if torch.cuda.is_available():
-        return torch.device('cuda')
+        return torch.device(f'cuda:{x}')
     else:
         return torch.device('cpu')
 
