@@ -8,6 +8,7 @@ class Layer(nn.Module):
             nn.Conv2d(in_size, out_size, kernel_size=4, stride=2, padding=1),
             nn.BatchNorm2d(out_size),
             nn.ReLU( inplace=True),
+            nn.Dropout2d(0.1)
         ])
 
     def forward(self, x):
@@ -19,7 +20,7 @@ class LayerT(nn.Module):
     def __init__(self, in_size, out_size, stride, padding) -> None:
         super().__init__()
         self.sublayers = nn.ModuleList([
-            nn.utils.spectral_norm(nn.ConvTranspose2d(in_size, out_size, kernel_size=4, stride=stride, padding=padding)),
+            nn.ConvTranspose2d(in_size, out_size, kernel_size=4, stride=stride, padding=padding),
             nn.BatchNorm2d(out_size),
             nn.ReLU(True),
         ])
@@ -39,6 +40,7 @@ class ResidualLayer(nn.Module):
             nn.Conv2d(in_size+out_size,out_size,1,bias=False),
             nn.BatchNorm2d(out_size),
             nn.LeakyReLU(0.2, inplace=True),
+            nn.Dropout2d(0.1)
         ])
 
     def forward(self, x):
@@ -56,8 +58,8 @@ class ResidualLayerT(nn.Module):
         super().__init__()
         self.device=device
         self.sublayers = nn.ModuleList([
-            nn.utils.spectral_norm(nn.ConvTranspose2d(in_size,out_size,kernel_size=1,bias=False)),
-            nn.utils.spectral_norm(nn.ConvTranspose2d(out_size, out_size, kernel_size=4, stride=stride, padding=padding)),
+            nn.ConvTranspose2d(in_size,out_size,kernel_size=1,bias=False),
+            nn.ConvTranspose2d(out_size, out_size, kernel_size=4, stride=stride, padding=padding),
             nn.BatchNorm2d(out_size),
             nn.ReLU(True)
         ])
