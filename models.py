@@ -8,8 +8,9 @@ class Layer(nn.Module):
             nn.Conv2d(in_size, out_size, kernel_size=4, stride=2, padding=1),
             nn.BatchNorm2d(out_size),
             nn.ReLU( inplace=True),
+            nn.Dropout2d(0.1)
         ])
-    
+
     def forward(self, x):
         for sublayer in self.sublayers:
             x = sublayer(x)
@@ -19,11 +20,12 @@ class LayerT(nn.Module):
     def __init__(self, in_size, out_size, stride, padding) -> None:
         super().__init__()
         self.sublayers = nn.ModuleList([
-            nn.utils.spectral_norm(nn.ConvTranspose2d(in_size, out_size, kernel_size=4, stride=stride, padding=padding)),
+            nn.ConvTranspose2d(in_size, out_size, kernel_size=4, stride=stride, padding=padding),
             nn.BatchNorm2d(out_size),
             nn.ReLU(True),
         ])
-    
+        nn.init.orthogonal_(self.sublayers[0].weight)
+
     def forward(self, x):
         for sublayer in self.sublayers:
             x = sublayer(x)
@@ -38,6 +40,7 @@ class ResidualLayer(nn.Module):
             nn.Conv2d(in_size+out_size,out_size,1,bias=False),
             nn.BatchNorm2d(out_size),
             nn.LeakyReLU(0.2, inplace=True),
+            nn.Dropout2d(0.1)
         ])
 
     def forward(self, x):
@@ -55,11 +58,13 @@ class ResidualLayerT(nn.Module):
         super().__init__()
         self.device=device
         self.sublayers = nn.ModuleList([
-            nn.utils.spectral_norm(nn.ConvTranspose2d(in_size,out_size,kernel_size=1,bias=False)),
-            nn.utils.spectral_norm(nn.ConvTranspose2d(out_size, out_size, kernel_size=4, stride=stride, padding=padding)),
+            nn.ConvTranspose2d(in_size,out_size,kernel_size=1,bias=False),
+            nn.ConvTranspose2d(out_size, out_size, kernel_size=4, stride=stride, padding=padding),
             nn.BatchNorm2d(out_size),
             nn.ReLU(True)
         ])
+        nn.init.orthogonal_(self.sublayers[0].weight)
+        nn.init.orthogonal_(self.sublayers[1].weight)
 
     def forward(self, x):
         for i, layer in enumerate(self.sublayers):
@@ -77,19 +82,19 @@ class Discriminator(nn.Module):
         super().__init__()
         self.layers = nn.ModuleList([
             # in: 3 x 32 x 32
-            Layer(3, 32),
-            # out: 32 x 16 x 16
+            Layer(3, 16),
+            # out: 16 x 16 x 16
+
+            Layer(16, 32),
+            # out: 32 x 8 x 8
 
             Layer(32, 64),
-            # out: 64 x 8 x 8
-
-            Layer(64, 128),
-            # out: 128 x 4 x 4
+            # out: 64 x 4 x 4
 
         ])
 
         self.finisher = nn.ModuleList([
-            nn.Conv2d(128,1,kernel_size=4,stride=1,padding=0),
+            nn.Conv2d(64,1,kernel_size=4,stride=1,padding=0),
             # out: 1 x 1 x 1
             nn.Flatten(),
 
@@ -137,8 +142,9 @@ class GeneratorSkip(Generator):
     def __init__(self, latent_size, device) -> None:
         super().__init__(latent_size)
         self.device = device
+        self.latent_size=latent_size
         self.convs = [
-            nn.Conv2d(64, 64, 1,bias=False).to(device),
+            nn.Conv2d(latent_size, 64, 1,bias=False).to(device),
             nn.Conv2d(64, 64, 1,bias=False).to(device),
             nn.Conv2d(64, 32, 1,bias=False).to(device),
         ]
@@ -147,7 +153,7 @@ class GeneratorSkip(Generator):
         self.latent_size = latent_size
 
     def forward(self, x):
-        img = torch.zeros([x.shape[0], 64, 1, 1]).to(self.device)
+        img = torch.zeros([x.shape[0], self.latent_size, 1, 1]).to(self.device)
         for layer, conv in zip(self.layers, self.convs):
             x = layer(x)
             img = nn.Upsample([x.shape[2], x.shape[3]]).to(self.device)(img)
@@ -162,19 +168,24 @@ class DiscriminatorSkip(Discriminator):
         super().__init__()
         self.device=device
         self.convs = [
-            nn.Conv2d(3, 32, 1,bias=False).to(device),
+            # in 3 x 32 x 32
+            nn.Conv2d(3, 16, 1,bias=False).to(device),
+            # out: 16 x 16 x 16
+            nn.Conv2d(16, 32, 1,bias=False).to(device),
+            # out: 32 x 8 x 8
             nn.Conv2d(32, 64, 1,bias=False).to(device),
-            nn.Conv2d(64, 128, 1,bias=False).to(device),
+            # out: 64 x 4 x 4
         ]
         for layer in self.convs:
             layer.weight=nn.Parameter(torch.ones_like(layer.weight)/layer.weight.shape[0]).to(device)
     def forward(self, x):
-        x_init=torch.clone(x)
+        x_init=torch.clone(x).to(self.device)
         for conv,layer in zip(self.convs,self.layers):
-            x_init = nn.AvgPool2d(kernel_size=2)(x_init)
+            x_init = nn.AvgPool2d(kernel_size=2).to(self.device)(x_init)
             x_init = conv(x_init)
             x = layer(x)
             x=x+x_init
+            x= nn.BatchNorm2d(x.shape[1]).to(self.device)(x)
         for fin in self.finisher:
             x = fin(x)
         return x
@@ -184,35 +195,29 @@ class DiscriminatorResidual(Discriminator):
     def __init__(self) -> None:
         super().__init__()
         self.layers=nn.ModuleList([
-            # in: 3 x 64 x 64
-            ResidualLayer(3, 6),
-            # out: 16 x 32 x 32
+            # in: 3 x 32 x 32
+            ResidualLayer(3, 16),
+            # out: 16 x 16 x 16
 
-            ResidualLayer(6, 12),
-            # out: 32 x 16 x 16
+            ResidualLayer(16, 32),
+            # out: 32 x 8 x 8
 
-            ResidualLayer(12, 24),
-            # out: 64 x 8 x 8
-
-            ResidualLayer(24, 48),
-            # out: 128 x 4 x 4
+            ResidualLayer(32, 64),
+            # out: 64 x 4 x 4
         ])
 class GeneratorResidual(Generator):
     def __init__(self, latent_size, device) -> None:
         super().__init__(latent_size)
         self.device = device
         self.layers = nn.ModuleList([
-            ResidualLayerT(latent_size, 128, 1, 0,self.device),
-            # out: 128 x 4 x 4
+            ResidualLayerT(latent_size, 64, 1, 0,self.device),
+            # out: 64 x 4 x 4
 
-            ResidualLayerT(128, 64, 2, 1,self.device),
+            ResidualLayerT(64, 64, 2, 1,self.device),
             # out: 64 x 8 x 8
 
             ResidualLayerT(64, 32, 2, 1,self.device),
             # out: 32 x 16 x 16
-
-            ResidualLayerT(32, 16, 2, 1,self.device),
-            # out: 16 x 32 x 32
         ])
 
 class GeneratorIntermidiate(Generator):

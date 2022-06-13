@@ -8,6 +8,7 @@ import time
 
 from tqdm import tqdm
 
+import util
 from models import *
 from train import Trainer
 from util import *
@@ -24,12 +25,12 @@ stats = (0.5, 0.5, 0.5), (0.5, 0.5, 0.5)
 image_size = 32
 batch_size = 64
 small_train_set = True
-small_set_size = 10000
-
-blur_kernels = [9, 7, 5, 3, 1]
+small_set_size = 5000
 
 
-def fit(epochs, lr,fixed_latent, start_idx=0,name="model"):
+
+
+def fit(epochs, lr,fixed_latent, start_idx=0,name="model",std=0.1,fade_noise=True):
         torch.cuda.empty_cache()
         gl_time=time.time()
         # Losses & scores
@@ -53,21 +54,19 @@ def fit(epochs, lr,fixed_latent, start_idx=0,name="model"):
             fixed_latent=checkpoint["fixed_latent"]
 
         trainer = Trainer(discriminator, generator, batch_size, device, latent_size)
-        blur_idx = 0
 
+        train_std=std
         for epoch in range(start_idx,epochs):
-            if epoch / epochs > (blur_idx + 1) / len(blur_kernels):
-                blur_idx += 1
             tim =time.time()
+            if fade_noise:
+                train_std=std*(1-min(0.95,epoch/(epochs/2)))
+                # linearly fade to a fraction over first half of the training
             for real_images, _ in train_dl:
                 # Train discriminator
-                if blur_kernels[blur_idx]>1:
-                    blur_images = T.GaussianBlur(blur_kernels[blur_idx], sigma=1)(real_images)
-                    loss_d, real_score, fake_score = trainer.train_discriminator(blur_images, opt_d)
-                else:
-                    loss_d, real_score, fake_score = trainer.train_discriminator(real_images, opt_d)
+                real_images=util.addGaussianNoise(real_images,device,std=train_std)
+                loss_d, real_score, fake_score = trainer.train_discriminator(real_images, opt_d)
                 # Train generator
-                loss_g = trainer.train_generator(opt_g)
+                loss_g = trainer.train_generator(opt_g,std=train_std)
 
             # Record losses & scores
             losses_g.append(loss_g)
@@ -97,6 +96,8 @@ def fit(epochs, lr,fixed_latent, start_idx=0,name="model"):
 #8k images, 32*32, ls=64, eps=10 , bs=256 => 1782 s, results= okeish
 if __name__ == '__main__':
 
+    torch.manual_seed(42)
+
     train_ds = ImageFolder(DATA_DIR, transform=T.Compose([
         T.Resize(image_size),
         T.CenterCrop(image_size),
@@ -120,5 +121,16 @@ if __name__ == '__main__':
 
     fixed_latent = torch.randn(64, latent_size, 1, 1, device=device)
     gen_save_samples(generator, sample_dir, 0, fixed_latent, stats)
-    history = fit(epochs, lr,fixed_latent,start_idx=start_from)
+    history = fit(epochs, lr,fixed_latent,start_idx=start_from,std=0.16,fade_noise=True)
     print('done')
+
+
+"""
+Notes:
+    - disable blur
+    - add noise to discriminator input
+    - disable spectral norm (kills some of variation, and bleaches vibrant colors)
+    - initiate from orthogonal
+    - make noise linearly fade to fractional (nonzero) value
+    - penalize overconfidence
+"""
