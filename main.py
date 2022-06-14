@@ -21,10 +21,12 @@ latent_size = 32
 start_from=0
 lr = 0.0002
 epochs = 301
-sample_dir = 'std-generatedFourier'
+sample_dir = 'std-generatedResidual'
 stats = (0.5, 0.5, 0.5), (0.5, 0.5, 0.5)
 image_size = 32
 batch_size = 64
+noise_std = 0.08
+noise_fade = 1/3
 small_train_set = True
 small_set_size = 5000
 
@@ -115,23 +117,23 @@ if __name__ == '__main__':
     
 
     if on_miracle:
-        device = get_default_device(random.randint(0,4))
+        device = get_default_device(3)#random.randint(0,4))
     else:
         device = get_default_device(0)
     train_dl = DeviceDataLoader(train_dl, device)
 
-    discriminatorModel = Discriminator().to(device)
-    #discriminatorModel = DiscriminatorResidual().to(device)
+    #discriminatorModel = Discriminator().to(device)
+    discriminatorModel = DiscriminatorResidual().to(device)
     #discriminatorModel = DiscriminatorSkip(device).to(device)
-    generatorModel = Generator(latent_size).to(device)
-    #generatorModel = GeneratorResidual(latent_size,device).to(device)
+    #generatorModel = Generator(latent_size).to(device)
+    generatorModel = GeneratorResidual(latent_size,device).to(device)
     #generatorModel = GeneratorSkip(latent_size,device).to(device)
 
     os.makedirs(sample_dir, exist_ok=True)
 
     fixed_latent = torch.randn(64, latent_size, 1, 1, device=device)
     gen_save_samples(generatorModel, sample_dir, 0, fixed_latent, stats)
-    history = fit(epochs, lr,fixed_latent,generatorModel,discriminatorModel,start_idx=start_from,std=0.16,fade_noise=(True,2/5))
+    history = fit(epochs, lr,fixed_latent,generatorModel,discriminatorModel,start_idx=start_from,std=noise_std,fade_noise=(True,noise_fade))
     print('done')
 
 
