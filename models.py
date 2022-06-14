@@ -5,7 +5,8 @@ class Layer(nn.Module):
     def __init__(self, in_size, out_size) -> None:
         super().__init__()
         self.sublayers = nn.ModuleList([
-            nn.Conv2d(in_size, out_size, kernel_size=4, stride=2, padding=1),
+            #nn.Conv2d(in_size, out_size, kernel_size=4, stride=2, padding=1),
+            nn.utils.spectral_norm(nn.Conv2d(in_size, out_size, kernel_size=4, stride=2, padding=1)),
             nn.BatchNorm2d(out_size),
             nn.ReLU( inplace=True),
             nn.Dropout2d(0.1)
@@ -36,8 +37,10 @@ class ResidualLayer(nn.Module):
     def __init__(self, in_size, out_size) -> None:
         super().__init__()
         self.sublayers = nn.ModuleList([
-            nn.Conv2d(in_size, out_size, kernel_size=4, stride=2, padding=1),
-            nn.Conv2d(in_size+out_size,out_size,1,bias=False),
+            #nn.Conv2d(in_size, out_size, kernel_size=4, stride=2, padding=1),
+            #nn.Conv2d(in_size+out_size,out_size,1,bias=False),
+            nn.utils.spectral_norm(nn.Conv2d(in_size, out_size, kernel_size=4, stride=2, padding=1)),
+            nn.utils.spectral_norm(nn.Conv2d(in_size+out_size,out_size,1,bias=False)),
             nn.BatchNorm2d(out_size),
             nn.LeakyReLU(0.2, inplace=True),
             nn.Dropout2d(0.1)
@@ -94,7 +97,8 @@ class Discriminator(nn.Module):
         ])
 
         self.finisher = nn.ModuleList([
-            nn.Conv2d(64,1,kernel_size=4,stride=1,padding=0),
+            #nn.Conv2d(64,1,kernel_size=4,stride=1,padding=0),
+            nn.utils.spectral_norm(nn.Conv2d(64,1,kernel_size=4,stride=1,padding=0)),
             # out: 1 x 1 x 1
             nn.Flatten(),
 

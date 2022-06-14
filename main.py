@@ -20,7 +20,7 @@ latent_size = 32
 start_from=0
 lr = 0.0002
 epochs = 301
-sample_dir = 'std-generated'
+sample_dir = 'std-generatedSpec'
 stats = (0.5, 0.5, 0.5), (0.5, 0.5, 0.5)
 image_size = 32
 batch_size = 64
@@ -30,7 +30,7 @@ small_set_size = 5000
 
 
 
-def fit(epochs, lr,fixed_latent, start_idx=0,name="model",std=0.1,fade_noise=True):
+def fit(epochs, lr,fixed_latent,generator,discriminator, start_idx=0,name="model",std=0.1,fade_noise=True):
         torch.cuda.empty_cache()
         gl_time=time.time()
         # Losses & scores
@@ -114,14 +114,18 @@ if __name__ == '__main__':
     device = get_default_device()
     train_dl = DeviceDataLoader(train_dl, device)
 
-    discriminator = Discriminator().to(device)
-    generator = Generator(latent_size).to(device)
+    discriminatorModel = Discriminator().to(device)
+    #discriminatorModel = DiscriminatorResidual().to(device)
+    #discriminatorModel = DiscriminatorSkip(device).to(device)
+    generatorModel = Generator(latent_size).to(device)
+    #generatorModel = GeneratorResidual(latent_size,device).to(device)
+    #generatorModel = GeneratorSkip(latent_size,device).to(device)
 
     os.makedirs(sample_dir, exist_ok=True)
 
     fixed_latent = torch.randn(64, latent_size, 1, 1, device=device)
-    gen_save_samples(generator, sample_dir, 0, fixed_latent, stats)
-    history = fit(epochs, lr,fixed_latent,start_idx=start_from,std=0.16,fade_noise=True)
+    gen_save_samples(generatorModel, sample_dir, 0, fixed_latent, stats)
+    history = fit(epochs, lr,fixed_latent,generatorModel,discriminatorModel,start_idx=start_from,std=0.16,fade_noise=True)
     print('done')
 
 
