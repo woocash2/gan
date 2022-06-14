@@ -26,6 +26,8 @@ sample_dir = 'fresh-64-Gskip-Dstd'
 stats = (0.5, 0.5, 0.5), (0.5, 0.5, 0.5)
 image_size = 64
 batch_size = 64
+noise_std = 0.08
+noise_fade = 1/3
 small_train_set = True
 small_set_size = 5000
 
@@ -137,7 +139,7 @@ if __name__ == '__main__':
 
     fixed_latent = torch.randn(64, latent_size, 1, 1, device=device)
     gen_save_samples(generatorModel, sample_dir, 0, fixed_latent, stats)
-    history = fit(epochs, lr,fixed_latent,generatorModel,discriminatorModel,start_idx=start_from,std=0.16,fade_noise=(True,2/5))
+    history = fit(epochs, lr,fixed_latent,generatorModel,discriminatorModel,start_idx=start_from,std=noise_std,fade_noise=(True,noise_fade))
     print('done')
 
 

@@ -33,7 +33,7 @@ def gen_save_samples(generator, sample_dir, index, latent_tensors, stats, show=T
         fake_images = generator(latent_tensors)
         fake_fname = 'generated-images-{0:0=4d}.png'.format(index)
         save_image(denorm(fake_images, stats), os.path.join(sample_dir, fake_fname), nrow=8)
-        print('Saving', fake_fname)
+        print('Saving', fake_fname, "to", sample_dir)
         if show:
             fig, ax = plt.subplots(figsize=(8, 8))
             ax.set_xticks([]);

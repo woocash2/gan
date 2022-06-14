@@ -88,17 +88,17 @@ class Discriminator(nn.Module):
             Layer(3, 16),
             # out: 16 x 16 x 16
 
-            Layer(16, 48),
+            Layer(16, 36),
             # out: 32 x 8 x 8
 
-            Layer(48, 128),
+            Layer(36, 84),
             # out: 64 x 4 x 4
 
         ])
 
         self.finisher = nn.ModuleList([
             #nn.Conv2d(64,1,kernel_size=4,stride=1,padding=0),
-            nn.utils.spectral_norm(nn.Conv2d(128,1,kernel_size=4,stride=1,padding=0)),
+            nn.utils.spectral_norm(nn.Conv2d(84,1,kernel_size=4,stride=1,padding=0)),
             # out: 1 x 1 x 1
             nn.Flatten(),
 
@@ -175,9 +175,9 @@ class DiscriminatorSkip(Discriminator):
             # in 3 x 32 x 32
             nn.Conv2d(3, 16, 1,bias=False).to(device),
             # out: 16 x 16 x 16
-            nn.Conv2d(16, 48, 1,bias=False).to(device),
+            nn.Conv2d(16, 36, 1,bias=False).to(device),
             # out: 32 x 8 x 8
-            nn.Conv2d(48, 128, 1,bias=False).to(device),
+            nn.Conv2d(36, 84, 1,bias=False).to(device),
             # out: 64 x 4 x 4
         ]
         for layer in self.convs:
@@ -203,10 +203,10 @@ class DiscriminatorResidual(Discriminator):
             ResidualLayer(3, 16),
             # out: 16 x 16 x 16
 
-            ResidualLayer(16, 48),
+            ResidualLayer(16, 36),
             # out: 32 x 8 x 8
 
-            ResidualLayer(48, 128),
+            ResidualLayer(36, 84),
             # out: 64 x 4 x 4
         ])
 class GeneratorResidual(Generator):
