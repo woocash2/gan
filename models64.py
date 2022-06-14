@@ -74,13 +74,13 @@ class Generator64(nn.Module):
         super().__init__()
         self.layers = nn.ModuleList([
             # in: latent_size  x 1 x 1
-            LayerT(latent_size, 64, 1, 0),
+            LayerT(latent_size, 96, 1, 0),
             # out: 64 x 4 x 4
 
-            LayerT(64, 64, 2, 1),
+            LayerT(96, 96, 2, 1),
             # out: 64 x 8 x 8
 
-            LayerT(64, 64, 2, 1),
+            LayerT(96, 64, 2, 1),
             # out: 64 x 16 x 16
 
             LayerT(64, 32, 2, 1),
@@ -107,9 +107,9 @@ class GeneratorSkip64(Generator64):
         self.device = device
         self.latent_size=latent_size
         self.convs = [
-            nn.Conv2d(latent_size, 64, 1,bias=False).to(device),
-            nn.Conv2d(64, 64, 1,bias=False).to(device),
-            nn.Conv2d(64, 64, 1,bias=False).to(device),
+            nn.Conv2d(latent_size, 96, 1,bias=False).to(device),
+            nn.Conv2d(96, 96, 1,bias=False).to(device),
+            nn.Conv2d(96, 64, 1,bias=False).to(device),
             nn.Conv2d(64, 32, 1,bias=False).to(device),
         ]
         for conv in self.convs:
@@ -137,11 +137,14 @@ class DiscriminatorResidual64(Discriminator64):
             ResidualLayer(3, 16),
             # out: 16 x 16 x 16
 
-            ResidualLayer(16, 48),
+            ResidualLayer(16, 36),
             # out: 32 x 8 x 8
 
-            ResidualLayer(48, 128),
+            ResidualLayer(36, 84),
             # out: 64 x 4 x 4
+
+            ResidualLayer(84, 84),
+            # out: 84 x 4 x 4
         ])
 
 
@@ -152,6 +155,9 @@ class GeneratorResidual64(Generator64):
         self.layers = nn.ModuleList([
             ResidualLayerT(latent_size, 96, 1, 0,self.device),
             # out: 64 x 4 x 4
+
+            ResidualLayerT(96, 96, 1, 0,self.device),
+            # out: 
 
             ResidualLayerT(96, 64, 2, 1,self.device),
             # out: 64 x 8 x 8
