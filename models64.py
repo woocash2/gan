@@ -11,18 +11,18 @@ class Discriminator64(nn.Module):
             Layer(3, 16),
             # out: 16 x 32 x 32
 
-            Layer(16, 32),
+            Layer(16, 36),
             # out: 32 x 16 x 16
 
-            Layer(32, 64),
+            Layer(36, 84),
             # out: 64 x 8 x 8
 
-            Layer(64, 64),
+            Layer(84, 84),
             # out: 64 x 4 x 4
         ])
 
         self.finisher = nn.ModuleList([
-            nn.Conv2d(64,1,kernel_size=4,stride=1,padding=0),
+            nn.Conv2d(84,1,kernel_size=4,stride=1,padding=0),
             # out: 1 x 1 x 1
             nn.Flatten(),
 
@@ -104,11 +104,11 @@ class DiscriminatorSkip64(Discriminator64):
             # in 3 x 64 x 64
             nn.Conv2d(3, 16, 1,bias=False).to(device),
             # out: 16 x 32 x 32
-            nn.Conv2d(16, 32, 1,bias=False).to(device),
+            nn.Conv2d(16, 36, 1,bias=False).to(device),
             # out: 32 x 16 x 16
-            nn.Conv2d(32, 64, 1,bias=False).to(device),
+            nn.Conv2d(36, 84, 1,bias=False).to(device),
             # out: 64 x 8 x 8
-            nn.Conv2d(64, 64, 1,bias=False).to(device),
+            nn.Conv2d(84, 84, 1,bias=False).to(device),
             # out: 64 x 4 x 4
         ]
         for conv in self.convs:

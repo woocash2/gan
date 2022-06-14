@@ -17,7 +17,7 @@ from util import *
 DATA_DIR='organic'
 epochs_per_sample=5
 epochs_per_checkpoint=10
-latent_size = 32
+latent_size = 64
 start_from=0
 lr = 0.0002
 epochs = 301
