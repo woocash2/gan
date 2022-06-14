@@ -11,19 +11,20 @@ from tqdm import tqdm
 
 import util
 from models import *
+from models64 import *
 from train import Trainer
 from util import *
 
 DATA_DIR='organic'
 epochs_per_sample=5
 epochs_per_checkpoint=10
-latent_size = 32
+latent_size = 64
 start_from=0
 lr = 0.0002
 epochs = 301
-sample_dir = 'std-generatedFourier'
+sample_dir = 'fresh-64-Gskip-Dstd'
 stats = (0.5, 0.5, 0.5), (0.5, 0.5, 0.5)
-image_size = 32
+image_size = 64
 batch_size = 64
 small_train_set = True
 small_set_size = 5000
@@ -115,17 +116,22 @@ if __name__ == '__main__':
     
 
     if on_miracle:
-        device = get_default_device(random.randint(0,4))
+        device = get_default_device(0)
     else:
         device = get_default_device(0)
     train_dl = DeviceDataLoader(train_dl, device)
 
-    discriminatorModel = Discriminator().to(device)
+    #discriminatorModel = Discriminator().to(device)
     #discriminatorModel = DiscriminatorResidual().to(device)
     #discriminatorModel = DiscriminatorSkip(device).to(device)
-    generatorModel = Generator(latent_size).to(device)
+    discriminatorModel = Discriminator64().to(device)
+    #discriminatorModel = DiscriminatorSkip64(device).to(device)
+
+    #generatorModel = Generator(latent_size).to(device)
     #generatorModel = GeneratorResidual(latent_size,device).to(device)
     #generatorModel = GeneratorSkip(latent_size,device).to(device)
+    #generatorModel = Generator64(latent_size).to(device)
+    generatorModel = GeneratorSkip64(latent_size, device).to(device)
 
     os.makedirs(sample_dir, exist_ok=True)
 
