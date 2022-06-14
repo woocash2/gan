@@ -1,4 +1,5 @@
 import os
+import random
 
 from torch.utils.data import DataLoader
 from torchvision.datasets import ImageFolder
@@ -20,17 +21,19 @@ latent_size = 32
 start_from=0
 lr = 0.0002
 epochs = 301
-sample_dir = 'std-generated'
+sample_dir = 'std-generatedFourier'
 stats = (0.5, 0.5, 0.5), (0.5, 0.5, 0.5)
 image_size = 32
 batch_size = 64
 small_train_set = True
 small_set_size = 5000
 
+on_miracle = True
 
 
 
-def fit(epochs, lr,fixed_latent, start_idx=0,name="model",std=0.1,fade_noise=True):
+
+def fit(epochs, lr,fixed_latent,generator,discriminator, start_idx=0,name="model",std=0.1,fade_noise=(True,1/2)):
         torch.cuda.empty_cache()
         gl_time=time.time()
         # Losses & scores
@@ -58,8 +61,8 @@ def fit(epochs, lr,fixed_latent, start_idx=0,name="model",std=0.1,fade_noise=Tru
         train_std=std
         for epoch in range(start_idx,epochs):
             tim =time.time()
-            if fade_noise:
-                train_std=std*(1-min(0.95,epoch/(epochs/2)))
+            if fade_noise[0]:
+                train_std=std*(1-min(0.95,fade_noise[1]*epoch/(epochs)))
                 # linearly fade to a fraction over first half of the training
             for real_images, _ in train_dl:
                 # Train discriminator
@@ -111,17 +114,24 @@ if __name__ == '__main__':
         train_dl = DataLoader(train_ds, batch_size, shuffle=True, num_workers=3, pin_memory=True)
     
 
-    device = get_default_device()
+    if on_miracle:
+        device = get_default_device(random.randint(0,4))
+    else:
+        device = get_default_device(0)
     train_dl = DeviceDataLoader(train_dl, device)
 
-    discriminator = Discriminator().to(device)
-    generator = Generator(latent_size).to(device)
+    discriminatorModel = Discriminator().to(device)
+    #discriminatorModel = DiscriminatorResidual().to(device)
+    #discriminatorModel = DiscriminatorSkip(device).to(device)
+    generatorModel = Generator(latent_size).to(device)
+    #generatorModel = GeneratorResidual(latent_size,device).to(device)
+    #generatorModel = GeneratorSkip(latent_size,device).to(device)
 
     os.makedirs(sample_dir, exist_ok=True)
 
     fixed_latent = torch.randn(64, latent_size, 1, 1, device=device)
-    gen_save_samples(generator, sample_dir, 0, fixed_latent, stats)
-    history = fit(epochs, lr,fixed_latent,start_idx=start_from,std=0.16,fade_noise=True)
+    gen_save_samples(generatorModel, sample_dir, 0, fixed_latent, stats)
+    history = fit(epochs, lr,fixed_latent,generatorModel,discriminatorModel,start_idx=start_from,std=0.16,fade_noise=(True,2/5))
     print('done')
 
 
