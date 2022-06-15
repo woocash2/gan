@@ -133,15 +133,15 @@ class DiscriminatorResidual64(Discriminator64):
     def __init__(self) -> None:
         super().__init__()
         self.layers=nn.ModuleList([
-            # in: 3 x 32 x 32
+            # in: 3 x 64 x 64
             ResidualLayer(3, 16),
-            # out: 16 x 16 x 16
+            # out: 16 x 32 x 32
 
             ResidualLayer(16, 36),
-            # out: 32 x 8 x 8
+            # out: 32 x 16 x 16
 
             ResidualLayer(36, 84),
-            # out: 64 x 4 x 4
+            # out: 84 x 8 x 8
 
             ResidualLayer(84, 84),
             # out: 84 x 4 x 4
@@ -156,7 +156,7 @@ class GeneratorResidual64(Generator64):
             ResidualLayerT(latent_size, 96, 1, 0,self.device),
             # out: 64 x 4 x 4
 
-            ResidualLayerT(96, 96, 1, 0,self.device),
+            ResidualLayerT(96, 96, 2, 1,self.device),
             # out: 
 
             ResidualLayerT(96, 64, 2, 1,self.device),
@@ -165,3 +165,46 @@ class GeneratorResidual64(Generator64):
             ResidualLayerT(64, 32, 2, 1,self.device),
             # out: 32 x 16 x 16
         ])
+
+class GeneratorIntermidiate64(Generator64):
+    def __init__(self, latent_size, device) -> None:
+        super().__init__(latent_size)
+        self.device = device
+
+        self.layers = nn.ModuleList([
+            # in: latent_size  x 1 x 1
+            LayerT(256, 192, 1, 0),
+            # out: 64 x 4 x 4
+
+            LayerT(192, 96, 2, 1),
+
+            LayerT(96, 64, 2, 1),
+            # out: 64 x 8 x 8
+
+            LayerT(64, 32, 2, 1),
+            # out: 32 x 16 x 16
+        ])
+        self.layers = nn.ModuleList([
+            # in: latent_size  x 1 x 1
+            LayerT(256, 192, 1, 0),
+            # out: 64 x 4 x 4
+
+            LayerT(192, 96, 2, 1),
+
+            LayerT(96, 64, 2, 1),
+            # out: 64 x 8 x 8
+
+            LayerT(64, 32, 2, 1),
+            # out: 32 x 16 x 16
+        ])
+
+    def forward(self, x):
+        x = torch.view_as_real(torch.fft.rfftn(x,s=6,norm="ortho"))
+        x = nn.Flatten()(x)
+        x = x[:, :, None, None]
+        for layer in self.layers:
+            x = layer(x)
+        for fin in self.finisher:
+            x = fin(x)
+        return x
+

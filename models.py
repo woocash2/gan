@@ -223,4 +223,43 @@ class GeneratorResidual(Generator):
             ResidualLayerT(64, 32, 2, 1,self.device),
             # out: 32 x 16 x 16
         ])
+        
+        
+class GeneratorIntermidiate(Generator):
+    def __init__(self, latent_size, device) -> None:
+        super().__init__(latent_size)
+        self.device = device
+
+        self.layers = nn.ModuleList([
+            # in: latent_size  x 1 x 1
+            LayerT(144, 96, 1, 0),
+            # out: 64 x 4 x 4
+
+            LayerT(96, 64, 2, 1),
+            # out: 64 x 8 x 8
+
+            LayerT(64, 32, 2, 1),
+            # out: 32 x 16 x 16
+        ])
+        self.layers = nn.ModuleList([
+            # in: latent_size  x 1 x 1
+            LayerT(144, 96, 1, 0),
+            # out: 64 x 4 x 4
+
+            LayerT(96, 64, 2, 1),
+            # out: 64 x 8 x 8
+
+            LayerT(64, 32, 2, 1),
+            # out: 32 x 16 x 16
+        ])
+
+    def forward(self, x):
+        x = torch.view_as_real(torch.fft.rfftn(x,s=4,norm="ortho"))
+        x = nn.Flatten()(x)
+        x = x[:, :, None, None]
+        for layer in self.layers:
+            x = layer(x)
+        for fin in self.finisher:
+            x = fin(x)
+        return x
 

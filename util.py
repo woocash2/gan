@@ -29,9 +29,9 @@ def to_device(data, device):
         return [to_device(x, device) for x in data]
     return data.to(device, non_blocking=True)
 
-def gen_save_samples(generator, sample_dir, index, latent_tensors, stats, show=True):
+def gen_save_samples(generator, sample_dir, index, latent_tensors, stats, show=True,prefix=""):
         fake_images = generator(latent_tensors)
-        fake_fname = 'generated-images-{0:0=4d}.png'.format(index)
+        fake_fname = prefix+'generated-images-{0:0=4d}.png'.format(index)
         save_image(denorm(fake_images, stats), os.path.join(sample_dir, fake_fname), nrow=8)
         print('Saving', fake_fname, "to", sample_dir)
         if show:
